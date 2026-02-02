@@ -1,8 +1,7 @@
 # Digital Carbon Tracker 🌍
-**Capstone Project - Team Jim**
+**Capstone Project -**
 
 A Flask-based REST API designed to track and analyze digital carbon footprints. This project incorporates user authentication, MongoDB integration, and future modules for machine learning analysis.
-
 
 ---
 
@@ -12,9 +11,8 @@ To ensure your contributions are tracked correctly and the code runs on your loc
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/YOUR_USERNAME/digital-carbon-tracker.git](https://github.com/YOUR_USERNAME/digital-carbon-tracker.git)
-cd digital-carbon-tracker
-
+git clone [https://github.com/zim1288/Digital-carbon-footprint-tracker.git](https://github.com/zim1288/Digital-carbon-footprint-tracker.git)
+cd Digital-carbon-footprint-tracker
 
 ### 2. Set Up Virtual Environment
 
@@ -27,11 +25,9 @@ venv\Scripts\activate
 # Activate it (Mac/Linux)
 source venv/bin/activate
 
-
 ### 3. Install Dependencies
 
 pip install -r requirements.txt
-
 
 ### 4. Configuration (.env)
 For security, the database credentials are not stored in GitHub.
