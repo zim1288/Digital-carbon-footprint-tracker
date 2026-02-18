@@ -20,16 +20,19 @@ def create_app():
 
     with app.app_context():
         # Import blueprints
-        from routes.auth_routes import auth_bp
-        from routes.activity_routes import activity_bp
-        from routes.analytics_routes import analytics_bp
-        from routes.ml_routes import ml_bp    
+        try:
+            from routes.auth_routes import auth_bp
+            from routes.activity_routes import activity_bp
+            from routes.analytics_routes import analytics_bp
+            from routes.ml_routes import ml_bp    
 
-        # Register blueprints
-        app.register_blueprint(auth_bp, url_prefix='/auth')
-        app.register_blueprint(activity_bp, url_prefix='/activity')
-        app.register_blueprint(analytics_bp, url_prefix='/analytics')
-        app.register_blueprint(ml_bp, url_prefix='/ml') 
+            # Register blueprints
+            app.register_blueprint(auth_bp, url_prefix='/auth')
+            app.register_blueprint(activity_bp, url_prefix='/activity')
+            app.register_blueprint(analytics_bp, url_prefix='/analytics')
+            app.register_blueprint(ml_bp, url_prefix='/ml')
+        except ImportError as e:
+            print(f"Warning: Could not import a route. Error: {e}")
 
     # Base Test Route
     @app.route("/")
@@ -38,7 +41,8 @@ def create_app():
 
     return app
 
+# Create the app instance
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)
