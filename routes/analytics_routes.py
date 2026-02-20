@@ -2,7 +2,6 @@ from flask import Blueprint, jsonify
 from datetime import datetime, timedelta
 from extensions import mongo
 
-# Defined with url_prefix='/analytics' in app.py
 analytics_bp = Blueprint("analytics_bp", __name__)
 
 # ==============================
