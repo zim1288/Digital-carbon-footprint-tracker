@@ -11,7 +11,7 @@ To ensure your contributions are tracked correctly and the code runs on your loc
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/zim1288/Digital-carbon-footprint-tracker.git](https://github.com/zim1288/Digital-carbon-footprint-tracker.git)
+git clone https://github.com/zim1288/Digital-carbon-footprint-tracker.git
 cd Digital-carbon-footprint-tracker
 
 ### 2. Set Up Virtual Environment
