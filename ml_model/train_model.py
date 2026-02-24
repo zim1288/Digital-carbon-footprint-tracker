@@ -1,8 +1,16 @@
+import os
+from dotenv import load_dotenv
 from pymongo import MongoClient
+
+# Load environment variables from your .env file
+load_dotenv()
 
 # ==========================
 # 1. Connect to MongoDB
 # ==========================
-MONGO_URI = "mongodb+srv://jim2305341288_db_user:CarbonProject2026@cluster0.yjldidw.mongodb.net/digital_carbon_db?retryWrites=true&w=majority"
+# Safely grab the URI from the environment variable
+MONGO_URI = os.getenv("MONGO_URI")
+
+# Connect to the database
 client = MongoClient(MONGO_URI)
 db = client["digital_carbon_db"]
