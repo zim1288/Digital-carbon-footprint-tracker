@@ -1,16 +1,28 @@
 import os
-from dotenv import load_dotenv
+import pandas as pd
 from pymongo import MongoClient
+from dotenv import load_dotenv
 
-# Load environment variables from your .env file
+# Load environment variables from a .env file
 load_dotenv()
 
-# ==========================
+# ================================
 # 1. Connect to MongoDB
-# ==========================
-# Safely grab the URI from the environment variable
+# ================================
+# Retrieve the URI from the environment variables safely
 MONGO_URI = os.getenv("MONGO_URI")
 
-# Connect to the database
 client = MongoClient(MONGO_URI)
 db = client["digital_carbon_db"]
+
+# ==========================
+# 2️⃣ Load dataset
+# ==========================
+print("⏳ Fetching data from MongoDB...")
+activities = list(db.activities.find())
+
+if not activities:
+    print("❌ No data found in database. Please add activities via Postman first.")
+    exit()
+
+data = pd.DataFrame(activities)
