@@ -16,7 +16,7 @@ client = MongoClient(MONGO_URI)
 db = client["digital_carbon_db"]
 
 # ==========================
-# 2️⃣ Load dataset
+# 2. Load dataset
 # ==========================
 print("⏳ Fetching data from MongoDB...")
 activities = list(db.activities.find())
