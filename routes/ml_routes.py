@@ -23,3 +23,36 @@ def ml_features(email):
 def carbon_risk(email):
     # result = predict_carbon_risk(mongo, email)
     return jsonify({"risk_score": 50, "risk_level": "Moderate"})
+
+# ==============================
+# 3. Recommendation Endpoint 
+# ==============================
+@ml_bp.route("/recommendation/<email>", methods=["GET"]) 
+def recommendations(email):
+    try:
+        # Check if user exists
+        user = mongo.db.users.find_one({"email": email})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        recommendations_list = [
+            "Reduce screen brightness to 50% 📉",
+            "Use Wi-Fi instead of Mobile Data 📶",
+            "Turn on 'Dark Mode' in all apps 🌙",
+            "Unplug charger when fully charged 🔋"
+        ]
+
+        return jsonify({
+            "user_email": email,
+            "recommendations": recommendations_list
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ==============================
+# 4. Training Dataset Endpoint
+# ==============================
+@ml_bp.route("/training-dataset", methods=["GET"])
+def training_dataset():
+    # dataset = generate_training_dataset(mongo)
+    return jsonify({"message": "Training dataset logic pending"})
