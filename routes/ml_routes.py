@@ -3,7 +3,6 @@ from extensions import mongo
 
 # Import ALL your service functions
 from services.ml_service import generate_ml_features, predict_carbon_risk, generate_training_dataset
-# from services.recommendation_service import generate_recommendations 
 
 ml_bp = Blueprint("ml", __name__)
 
@@ -12,7 +11,6 @@ ml_bp = Blueprint("ml", __name__)
 # ==============================
 @ml_bp.route("/ml-features/<email>", methods=["GET"])
 def ml_features(email):
-    # return dummy data if ML service is not ready
     # result = generate_ml_features(mongo, email)
     return jsonify({"message": "Feature generation pending implementation"})
 
