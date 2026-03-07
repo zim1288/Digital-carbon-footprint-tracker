@@ -1,5 +1,9 @@
 import os
 import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+import joblib
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
@@ -38,7 +42,6 @@ if "carbon_emission_g" not in data.columns or "user_email" not in data.columns:
 # ==========================
 print("⚙️ Processing features...")
 
-# Aggregate per user (Simple grouping to create a profile)
 grouped = data.groupby("user_email").agg({
     "carbon_emission_g": ["sum", "mean"],
 })
@@ -46,7 +49,6 @@ grouped = data.groupby("user_email").agg({
 grouped.columns = ["total_weekly_carbon", "avg_daily_carbon"]
 grouped = grouped.reset_index()
 
-# Dummy rule-based label (For initial training)
 def generate_label(value):
     if value > 500:
         return 2  # High Risk
@@ -65,3 +67,38 @@ print(f"✔ Data Processed: {len(grouped)} unique users found.")
 X = grouped[["total_weekly_carbon", "avg_daily_carbon"]]
 y = grouped["risk_label"]
 
+# ==========================
+# 5. Train-Test Split
+# ==========================
+if len(grouped) < 2:
+    print("⚠️ Not enough data to split. Training on full dataset.")
+    X_train, X_test, y_train, y_test = X, X, y, y
+else:
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+# ==========================
+# 6. Train Model
+# ==========================
+print("🧠 Training Logistic Regression Model...")
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# ==========================
+# 7. Evaluate
+# ==========================
+predictions = model.predict(X_test)
+print("\n🔍 Model Evaluation:")
+print(classification_report(y_test, predictions))
+
+# ==========================
+# 8. Save Model
+# ==========================
+model_path = "ml_model/carbon_risk_model.pkl"
+
+if not os.path.exists("ml_model"):
+    model_path = "carbon_risk_model.pkl" 
+
+joblib.dump(model, model_path)
+print(f"✅ Model saved successfully at: {model_path}")
