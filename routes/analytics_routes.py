@@ -1,16 +1,38 @@
 from flask import Blueprint, jsonify
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from extensions import mongo
 
 analytics_bp = Blueprint("analytics_bp", __name__)
 
 # ==============================
+# Fetch All Activities for User (Fixes your 404)
+# ==============================
+@analytics_bp.route("/user-activities/<email>", methods=["GET"])
+def get_user_activities(email):
+    try:
+        # Find all documents where user_email matches
+        activities = list(mongo.db.activities.find({"user_email": email}))
+
+        # Convert MongoDB ObjectIds and Dates to JSON-friendly format
+        for activity in activities:
+            activity["_id"] = str(activity["_id"])
+            if "date" in activity and isinstance(activity["date"], datetime):
+                activity["date"] = activity["date"].isoformat()
+
+        return jsonify(activities), 200
+
+    except Exception as e:
+        print(f"Error fetching user activities: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ==============================
 # Most Carbon Producing Activity
 # ==============================
 @analytics_bp.route("/most-carbon-activity/<email>", methods=["GET"])
 def most_carbon_activity(email):
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    # Using timezone-aware UTC for consistency
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
     activities = list(mongo.db.activities.find({
         "user_email": email,
@@ -23,7 +45,6 @@ def most_carbon_activity(email):
             "most_carbon_producing_activity": None
         }), 200
 
-    # Group carbon emissions by activity_type
     activity_breakdown = defaultdict(float)
     
     for activity in activities:
@@ -34,7 +55,6 @@ def most_carbon_activity(email):
     if not activity_breakdown:
         return jsonify({"message": "No carbon data found."}), 200
 
-    # Find the highest contributor
     highest_activity_type = max(activity_breakdown, key=activity_breakdown.get)
     highest_carbon_value = activity_breakdown[highest_activity_type]
 
@@ -45,15 +65,13 @@ def most_carbon_activity(email):
         }
     }), 200
 
-
 # ==============================
 # User Dashboard Data
 # ==============================
 @analytics_bp.route("/dashboard/<email>", methods=["GET"])
 def get_dashboard(email):
     try:
-        # Fetch activities for the last 7 days
-        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
         activities = list(mongo.db.activities.find({
             "user_email": email,
             "date": {"$gte": seven_days_ago}
@@ -70,7 +88,6 @@ def get_dashboard(email):
                 day_index = act["date"].weekday()
                 weekly_emissions[day_index] += carbon
 
-        # Basic logic to determine risk level 
         risk_level = "low"
         if total_carbon > 5000:
             risk_level = "high"
