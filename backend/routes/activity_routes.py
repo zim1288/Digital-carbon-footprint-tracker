@@ -1,11 +1,14 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from extensions import mongo 
-from services.carbon_service import calculate_carbon
+from services.carbon_service import calculate_carbon, upsert_daily_activity
 
 # Define the Blueprint
 activity_bp = Blueprint("activity_bp", __name__)
 
+# ==========================================
+# Add Single Activity
+# ==========================================
 @activity_bp.route("/add-activity", methods=["POST"])
 def add_activity():
     # 1. Get JSON Data
@@ -25,7 +28,6 @@ def add_activity():
 
     try:
         # 4. Calculate Carbon
-        # calculate_carbon function returns a number (float/int)
         carbon_result = calculate_carbon(activity_type, duration, data_used)
         
         # 5. Create the Database Document
@@ -34,12 +36,11 @@ def add_activity():
             "activity_type": activity_type,
             "duration_minutes": duration,
             "data_used_mb": data_used,
-            "carbon_emission_g": carbon_result, # This is what the dashboard looks for!
-            "date": datetime.utcnow()           # ⚠️ CRITICAL: Must be a Date object for filtering
+            "carbon_emission_g": carbon_result, 
+            "date": datetime.utcnow()           
         }
 
         # 6. Insert into MongoDB
-        # Note: Ensure collection name matches what analytics_routes uses ('activities')
         result = mongo.db.activities.insert_one(new_activity)
 
         return jsonify({
@@ -50,5 +51,32 @@ def add_activity():
 
     except Exception as e:
         print(f"Error adding activity: {e}")
-        # 👇 This will send the specific error text to screen
+        return jsonify({"error": str(e)}), 500
+
+# ==========================================
+# Update Daily Usage Sliders
+# ==========================================
+@activity_bp.route("/log-daily", methods=["POST"])
+def log_daily():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    user_email = data.get("user_email")
+    usage = data.get("usage") # Expecting a dict like: {"streaming": 2.5, "calls": 1.0, ...}
+
+    if not user_email or not usage:
+        return jsonify({"error": "Missing 'user_email' or 'usage' data"}), 400
+
+    try:
+        # Save to database and get the calculated total
+        total_carbon = upsert_daily_activity(mongo, user_email, usage)
+
+        return jsonify({
+            "message": "Daily usage synced successfully!",
+            "carbon_emission_g": total_carbon
+        }), 200
+
+    except Exception as e:
+        print(f"Error logging daily activity: {e}")
         return jsonify({"error": str(e)}), 500
