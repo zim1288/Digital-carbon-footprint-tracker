@@ -1,50 +1,141 @@
-# Welcome to your Expo app 👋
+# Digital Carbon Tracker Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo + React Native app for tracking digital carbon footprint, visualizing emissions, and receiving AI-powered recommendations.
 
-## Get started
+## Tech Stack
 
-1. Install dependencies
+- Expo SDK 54
+- React Native 0.81
+- Expo Router (file-based routing)
+- Context API for auth/theme/language
+- react-native-gifted-charts for analytics visuals
 
-   ```bash
-   npm install
-   ```
+## Features
 
-2. Start the app
+- Login and registration flow
+- Daily carbon tracker with 4 usage sliders
+- Manual activity entry modal
+- Analytics dashboard with pie and bar charts
+- AI impact analysis from backend Gemini route
+- Eco Coach chatbot from backend Gemini route
+- Light/dark theme toggle
+- English/Bengali language toggle
 
-   ```bash
-   npx expo start
-   ```
+## App Structure
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```text
+mobile-app/
+   app/
+      _layout.tsx
+      index.tsx
+      manual-log.tsx
+      modal.tsx
+      (tabs)/
+         _layout.tsx
+         tracker.tsx
+         analytics.tsx
+         tips.tsx
+   src/
+      context/
+         AuthContext.tsx
+         ThemeContext.tsx
+         LanguageContext.tsx
+      services/
+         api.ts
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Screen Overview
 
-## Learn more
+- `app/index.tsx`
+   - Login/register UI with password visibility toggle.
+   - Registration enforces password confirmation.
+- `app/(tabs)/tracker.tsx`
+   - Slider-based usage logging for: streaming, calls, social, general.
+   - Sends updates to `/activity/log-daily`.
+- `app/manual-log.tsx`
+   - Logs manual activities through `/activity/add-activity`.
+- `app/(tabs)/analytics.tsx`
+   - Pie chart from `/analytics/today-breakdown`.
+   - Weekly trend chart from `/analytics/weekly-history`.
+   - AI analysis using `/ml/analyze-usage`.
+- `app/(tabs)/tips.tsx`
+   - Recommendations from `/ml/recommendation`.
+   - Chat assistant using `/ml/ask-coach`.
+- `app/modal.tsx`
+   - About/Credits modal.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Context Providers
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- `AuthContext`
+   - Stores `userEmail` in memory.
+   - Provides `login(email)` and `logout()`.
+- `ThemeContext`
+   - Initializes from device color scheme.
+   - Provides `isDarkMode` and toggle action.
+- `LanguageContext`
+   - Supports `en` and `bn` dictionaries.
+   - Provides `t(key)` and language toggle.
 
-## Join the community
+## API Configuration
 
-Join our community of developers creating universal apps.
+The app currently uses a hardcoded backend base URL in `src/services/api.ts`:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```ts
+const BASE_URL = "http://192.168.0.153:5000";
+```
+
+Update this to your machine/LAN backend address before running on device/emulator.
+
+Windows IP example:
+
+```bash
+ipconfig
+```
+
+## Setup and Run
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Start Expo
+
+```bash
+npm start
+```
+
+### 3. Launch target
+
+- Android: `npm run android`
+- iOS: `npm run ios`
+- Web: `npm run web`
+
+## Available Scripts
+
+- `npm start`
+- `npm run android`
+- `npm run ios`
+- `npm run web`
+- `npm run lint`
+- `npm run reset-project`
+
+## Emissions Model Used in App
+
+The tracker UI calculates estimated daily emissions using these factors:
+
+- streaming: 55 gCO2/hour
+- calls: 40 gCO2/hour
+- social: 25 gCO2/hour
+- general: 10 gCO2/hour
+
+Formula:
+
+`total = streaming*55 + calls*40 + social*25 + general*10`
+
+## Important Notes
+
+- Auth state is in-memory only and resets when app restarts.
+- API failures are returned as `{ error: "..." }` by service methods.
+- Ensure backend is running and reachable on the same network for physical devices.
