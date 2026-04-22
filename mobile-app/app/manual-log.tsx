@@ -7,10 +7,11 @@ import { addActivity } from '../src/services/api';
 // Import our contexts
 import { useTheme } from '../src/context/ThemeContext';
 import { useAuth } from '../src/context/AuthContext';
+import { useLanguage } from '../src/context/LanguageContext';
 
 export default function ManualLogScreen() {
-  // Grab the actual logged-in user's email dynamically!
   const { userEmail } = useAuth(); 
+  const { t } = useLanguage();
 
   const [activityType, setActivityType] = useState("");
   const [duration, setDuration] = useState("");
@@ -24,12 +25,10 @@ export default function ManualLogScreen() {
       Alert.alert("Missing Info", "Please provide at least an activity type.");
       return;
     }
-
     if (!userEmail) {
       Alert.alert("Error", "You must be logged in to save an activity.");
       return;
     }
-
     setLoading(true);
     
     const response = await addActivity(
@@ -57,6 +56,7 @@ export default function ManualLogScreen() {
   const textColorSub = isDarkMode ? "#D1D5DB" : "#4B5563";
   const inputBg = isDarkMode ? "#374151" : "#fff";
   const inputBorderColor = isDarkMode ? "#4B5563" : "#D1D5DB";
+  const placeholderColor = isDarkMode ? "#9CA3AF" : "#999";
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -66,45 +66,45 @@ export default function ManualLogScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#10B981" />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: textColorMain }]}>Manual Entry</Text>
+          <Text style={[styles.headerTitle, { color: textColorMain }]}>{t('manualEntryTitle')}</Text>
           <View style={{ width: 24 }} /> 
         </View>
 
         <View style={styles.formContainer}>
-          <Text style={[styles.label, { color: textColorSub }]}>Activity Type</Text>
+          <Text style={[styles.label, { color: textColorSub }]}>{t('activityType')}</Text>
           <TextInput
             style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorderColor, color: textColorMain }]}
-            placeholder="e.g. Video Editing, Gaming, Downloading"
+            placeholder={t('activityPlaceholder')}
             value={activityType}
             onChangeText={setActivityType}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={placeholderColor}
           />
 
-          <Text style={[styles.label, { color: textColorSub }]}>Duration (Minutes)</Text>
+          <Text style={[styles.label, { color: textColorSub }]}>{t('durationMins')}</Text>
           <TextInput
             style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorderColor, color: textColorMain }]}
             placeholder="0"
             keyboardType="numeric"
             value={duration}
             onChangeText={setDuration}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={placeholderColor}
           />
 
-          <Text style={[styles.label, { color: textColorSub }]}>Data Used (MB)</Text>
+          <Text style={[styles.label, { color: textColorSub }]}>{t('dataUsedMB')}</Text>
           <TextInput
             style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorderColor, color: textColorMain }]}
             placeholder="0"
             keyboardType="numeric"
             value={dataUsed}
             onChangeText={setDataUsed}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={placeholderColor}
           />
 
           <TouchableOpacity style={styles.saveBtn} onPress={handleSaveActivity} disabled={loading}>
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveBtnText}>Save Activity</Text>
+              <Text style={styles.saveBtnText}>{t('saveActivity')}</Text>
             )}
           </TouchableOpacity>
         </View>
