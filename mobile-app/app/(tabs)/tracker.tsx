@@ -7,20 +7,23 @@ import { logDailyUsage, getTodayUsage } from "../../src/services/api";
 // Import our contexts
 import { useTheme } from "../../src/context/ThemeContext"; 
 import { useAuth } from "../../src/context/AuthContext";
+// Import Language context
+import { useLanguage } from "../../src/context/LanguageContext";
 
 const EMISSION_FACTORS = { streaming: 55, calls: 40, social: 25, general: 10 };
 
 export default function TrackerScreen() {
-  // Grab the actual logged-in user's email dynamically!
   const { userEmail } = useAuth(); 
   
   const [usage, setUsage] = useState({ streaming: 0, calls: 0, social: 0, general: 0 });
   const [syncing, setSyncing] = useState(false);
   const { isDarkMode } = useTheme();
+  
+  // Bring in the translation function
+  const { t } = useLanguage();
 
   useEffect(() => {
     const fetchInitialData = async () => {
-      // Ensure we have an email before fetching
       if (!userEmail) return; 
       const data = await getTodayUsage(userEmail);
       if (data) setUsage(data);
@@ -44,11 +47,12 @@ export default function TrackerScreen() {
   const carKm = (totalEmissions / 120).toFixed(1);
   const smartphonesCharged = (totalEmissions / 8).toFixed(0);
 
+  // Replaced hardcoded labels with the translation dictionary keys
   const categories = [
-    { id: 'streaming', label: "Streaming", icon: "videocam", color: "#FF8042", bg: "#FF804220" },
-    { id: 'social', label: "Social & Web", icon: "globe", color: "#00C49F", bg: "#00C49F20" },
-    { id: 'calls', label: "Video Calls", icon: "wifi", color: "#0088FE", bg: "#0088FE20" },
-    { id: 'general', label: "General Apps", icon: "apps", color: "#FFBB28", bg: "#FFBB2820" }
+    { id: 'streaming', labelKey: 'streaming', icon: "videocam", color: "#FF8042", bg: "#FF804220" },
+    { id: 'social', labelKey: 'socialWeb', icon: "globe", color: "#00C49F", bg: "#00C49F20" },
+    { id: 'calls', labelKey: 'videoCalls', icon: "wifi", color: "#0088FE", bg: "#0088FE20" },
+    { id: 'general', labelKey: 'generalApps', icon: "apps", color: "#FFBB28", bg: "#FFBB2820" }
   ];
 
   const bgColor = isDarkMode ? "#111827" : "#F3F4F6";
@@ -64,24 +68,24 @@ export default function TrackerScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={[styles.scoreCard, { backgroundColor: cardBg, borderColor: borderColor }]}>
-          <Text style={[styles.scoreSubtitle, { color: textColorSub }]}>TODAY'S FOOTPRINT</Text>
+          <Text style={[styles.scoreSubtitle, { color: textColorSub }]}>{t('todaysFootprint')}</Text>
           <View style={styles.scoreNumberBox}>
             <Text style={styles.scoreNumber}>{totalEmissions.toFixed(0)}</Text>
             <Text style={[styles.scoreUnit, { color: textColorSub }]}>gCO₂e</Text>
           </View>
           <View style={styles.equivalentsRow}>
             <View style={[styles.eqBadge, { backgroundColor: badgeBg }]}>
-              <Text style={[styles.eqText, { color: textColorMain }]}>🚗 ≈ {carKm} km driven</Text>
+              <Text style={[styles.eqText, { color: textColorMain }]}>🚗 ≈ {carKm} {t('kmDriven')}</Text>
             </View>
             <View style={[styles.eqBadge, { backgroundColor: badgeBg }]}>
-              <Text style={[styles.eqText, { color: textColorMain }]}>📱 ≈ {smartphonesCharged} charges</Text>
+              <Text style={[styles.eqText, { color: textColorMain }]}>📱 ≈ {smartphonesCharged} {t('charges')}</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.sectionHeader}>
           <Ionicons name="phone-portrait-outline" size={20} color="#10B981" />
-          <Text style={[styles.sectionTitle, { color: textColorMain }]}>Log Activity</Text>
+          <Text style={[styles.sectionTitle, { color: textColorMain }]}>{t('logActivity')}</Text>
           {syncing && <ActivityIndicator size="small" color="#10B981" style={{marginLeft: 10}}/>}
         </View>
 
@@ -92,9 +96,9 @@ export default function TrackerScreen() {
                 <View style={[styles.iconBox, { backgroundColor: cat.bg }]}>
                   <Ionicons name={cat.icon as any} size={18} color={cat.color} />
                 </View>
-                <Text style={[styles.sliderLabel, { color: textColorMain }]}>{cat.label}</Text>
+                <Text style={[styles.sliderLabel, { color: textColorMain }]}>{t(cat.labelKey as any)}</Text>
               </View>
-              <Text style={[styles.sliderValue, { color: textColorMain }]}>{usage[cat.id as keyof typeof usage]} hrs</Text>
+              <Text style={[styles.sliderValue, { color: textColorMain }]}>{usage[cat.id as keyof typeof usage]} {t('hrs')}</Text>
             </View>
             <Slider
               style={styles.slider} minimumValue={0} maximumValue={12} step={0.5}
@@ -106,7 +110,7 @@ export default function TrackerScreen() {
               onSlidingComplete={(val) => handleSliderComplete(cat.id, val)}
             />
             <Text style={[styles.estText, { color: textColorSub }]}>
-              Est. {(usage[cat.id as keyof typeof usage] * EMISSION_FACTORS[cat.id as keyof typeof EMISSION_FACTORS]).toFixed(0)}g CO₂
+              {t('est')} {(usage[cat.id as keyof typeof usage] * EMISSION_FACTORS[cat.id as keyof typeof EMISSION_FACTORS]).toFixed(0)}g CO₂
             </Text>
           </View>
         ))}

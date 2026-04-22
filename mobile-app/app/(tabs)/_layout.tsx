@@ -16,44 +16,30 @@ const { width } = Dimensions.get("window");
 // ==========================================
 const GlobalHeader = ({ title }: { title: string }) => {
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
-  
-  // Custom animation value starting off-screen to the right
   const slideAnim = useRef(new Animated.Value(width)).current; 
   
-  // Grab our Dark Mode state and toggle function
   const { isDarkMode, toggleDarkMode } = useTheme();
-
-  // Grab our Language state, toggle function, and translation helper
   const { language, toggleLanguage, t } = useLanguage();
 
   const openMenu = () => {
     setIsSettingsVisible(true);
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
   };
 
   const closeMenu = () => {
-    Animated.timing(slideAnim, {
-      toValue: width,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => setIsSettingsVisible(false));
+    Animated.timing(slideAnim, { toValue: width, duration: 300, useNativeDriver: true }).start(() => setIsSettingsVisible(false));
   };
 
   const handleLogout = () => {
     closeMenu();
-    setTimeout(() => router.replace('/'), 300); // Wait for animation to finish
+    setTimeout(() => router.replace('/'), 300); 
   };
 
   const handleManualLog = () => {
     closeMenu();
-    setTimeout(() => router.push('/manual-log'), 300); // Wait for animation to finish
+    setTimeout(() => router.push('/manual-log'), 300); 
   };
 
-  // Dynamic Colors based on Dark Mode
   const headerBg = isDarkMode ? "#064E3B" : "#059669";
   const drawerBg = isDarkMode ? "#111827" : "#F4FDF8";
   const textColor = isDarkMode ? "#F9FAFB" : "#374151";
@@ -71,17 +57,12 @@ const GlobalHeader = ({ title }: { title: string }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Changed animationType to "none" because we are animating it manually */}
       <Modal visible={isSettingsVisible} transparent={true} animationType="none" onRequestClose={closeMenu}>
         <Pressable style={styles.modalOverlay} onPress={closeMenu}>
-          {/* Flex-end pushes the drawer to the right side of the screen */}
           <View style={styles.drawerWrapper}>
-            
-            {/* Prevent tapping inside the menu from closing it */}
             <Pressable onPress={(e) => e.stopPropagation()}>
               <Animated.View style={[styles.sideMenu, { backgroundColor: drawerBg, transform: [{ translateX: slideAnim }] }]}>
                 
-                {/* Styled Colored Header inside the drawer */}
                 <View style={[styles.menuHeaderBox, { backgroundColor: headerBg }]}>
                   <View>
                     <Text style={styles.modalTitle}>{t('menuTitle')}</Text>
@@ -92,14 +73,12 @@ const GlobalHeader = ({ title }: { title: string }) => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Styled Menu Items */}
                 <View style={styles.menuItemsContainer}>
                   <TouchableOpacity style={[styles.menuItem, { backgroundColor: itemBg }]} onPress={handleManualLog}>
                     <View style={styles.iconBox}><Ionicons name="add" size={22} color="#10B981" /></View>
                     <Text style={[styles.menuText, { color: textColor }]}>{t('manualLog')}</Text>
                   </TouchableOpacity>
 
-                  {/* THIS IS THE MAGIC THEME TOGGLE BUTTON */}
                   <TouchableOpacity style={[styles.menuItem, { backgroundColor: itemBg }]} onPress={toggleDarkMode}>
                     <View style={styles.iconBox}>
                       <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color="#10B981" />
@@ -109,13 +88,11 @@ const GlobalHeader = ({ title }: { title: string }) => {
                     </Text>
                   </TouchableOpacity>
 
-                  {/* THIS IS THE MAGIC LANGUAGE TOGGLE BUTTON */}
                   <TouchableOpacity style={[styles.menuItem, { backgroundColor: itemBg }]} onPress={toggleLanguage}>
                     <View style={styles.iconBox}><Ionicons name="language" size={22} color="#10B981" /></View>
                     <Text style={[styles.menuText, { color: textColor }]}>{t('language')}</Text>
                   </TouchableOpacity>
 
-                  {/* UPDATED ABOUT US BUTTON */}
                   <TouchableOpacity style={[styles.menuItem, { backgroundColor: itemBg }]} onPress={() => {
                     closeMenu();
                     setTimeout(() => router.push('/modal'), 300); 
@@ -125,7 +102,6 @@ const GlobalHeader = ({ title }: { title: string }) => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Logout pushed to bottom */}
                 <View style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: 20 }}>
                   <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
                     <Ionicons name="log-out-outline" size={24} color="#EF4444" />
@@ -147,6 +123,8 @@ const GlobalHeader = ({ title }: { title: string }) => {
 // ==========================================
 export default function TabLayout() {
   const { isDarkMode } = useTheme();
+  // Bring the translator into the tabs!
+  const { t } = useLanguage();
 
   return (
     <Tabs
@@ -172,7 +150,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="tracker"
         options={{
-          title: 'Tracker',
+          title: t('tabTracker'), // Dynamically Translated
           tabBarIcon: ({ color }) => <Ionicons size={24} name="trending-up" color={color} />,
         }}
       />
@@ -180,7 +158,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="analytics"
         options={{
-          title: 'Analysis',
+          title: t('tabAnalysis'), // Dynamically Translated
           tabBarIcon: ({ color }) => <Ionicons size={24} name="pie-chart" color={color} />,
         }}
       />
@@ -188,7 +166,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="tips"
         options={{
-          title: 'Tips',
+          title: t('tabTips'), // Dynamically Translated
           tabBarIcon: ({ color }) => <Ionicons size={24} name="leaf" color={color} />,
         }}
       />
@@ -203,57 +181,17 @@ const styles = StyleSheet.create({
   header: { paddingTop: 50, paddingBottom: 15, paddingHorizontal: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 5, elevation: 5, zIndex: 10 },
   headerContent: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerText: { color: "#fff", fontSize: 20, fontWeight: "bold", letterSpacing: 0.5 },
-  
-  // Overlay covers entire screen
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  
-  // Wrapper aligns the drawer to the right side
   drawerWrapper: { flex: 1, flexDirection: "row", justifyContent: "flex-end" },
-  
-  // The actual sliding menu
-  sideMenu: { 
-    width: width * 0.80, // Covers 80% of the screen
-    height: "100%", 
-    borderTopLeftRadius: 30, 
-    borderBottomLeftRadius: 30, 
-    shadowColor: "#000", 
-    shadowOpacity: 0.3, 
-    shadowRadius: 20, 
-    elevation: 25,
-    overflow: "hidden"
-  },
-  
-  // Styled colored header inside the drawer
-  menuHeaderBox: { 
-    padding: 25, 
-    paddingTop: 60, // Accommodates status bar area
-    paddingBottom: 30, 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    alignItems: "flex-start",
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 10, elevation: 5
-  },
+  sideMenu: { width: width * 0.80, height: "100%", borderTopLeftRadius: 30, borderBottomLeftRadius: 30, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 20, elevation: 25, overflow: "hidden" },
+  menuHeaderBox: { padding: 25, paddingTop: 60, paddingBottom: 30, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", borderBottomLeftRadius: 30, borderBottomRightRadius: 30, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 },
   modalTitle: { fontSize: 26, fontWeight: "bold", color: "#fff" },
   modalSubtitle: { fontSize: 14, color: "#D1FAE5", marginTop: 4 },
   closeBtn: { backgroundColor: "#D1FAE5", padding: 6, borderRadius: 50 },
-
-  // List Items
   menuItemsContainer: { padding: 20, marginTop: 10 },
-  menuItem: { 
-    flexDirection: "row", alignItems: "center", gap: 15, 
-    padding: 15, borderRadius: 16, marginBottom: 12,
-    shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 5, elevation: 1
-  },
+  menuItem: { flexDirection: "row", alignItems: "center", gap: 15, padding: 15, borderRadius: 16, marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 5, elevation: 1 },
   iconBox: { backgroundColor: "#ECFDF5", padding: 8, borderRadius: 12 },
   menuText: { fontSize: 16, fontWeight: "600" },
-  
-  // Logout Button
-  logoutBtn: { 
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, 
-    marginHorizontal: 20, padding: 16, borderRadius: 16, 
-    backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA"
-  },
+  logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginHorizontal: 20, padding: 16, borderRadius: 16, backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA" },
   logoutText: { color: "#EF4444", fontWeight: "bold", fontSize: 16 }
 });

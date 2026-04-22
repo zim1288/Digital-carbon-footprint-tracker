@@ -1,9 +1,23 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import mongo
-
+import re
 
 auth_bp = Blueprint("auth_bp", __name__)
+
+# Helper function to enforce strong password policy
+def is_strong_password(password):
+    if len(password) < 8:
+        return False
+    if not re.search(r"[a-z]", password):
+        return False
+    if not re.search(r"[A-Z]", password):
+        return False
+    if not re.search(r"\d", password):
+        return False
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        return False
+    return True
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
@@ -19,6 +33,12 @@ def register():
     # Basic validation
     if not all([name, email, password]):
         return jsonify({"error": "Missing required fields"}), 400
+
+    # Password strength validation
+    if not is_strong_password(password):
+        return jsonify({
+            "error": "Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character."
+        }), 400
 
     # Check if user exists
     if mongo.db.users.find_one({"email": email}):
@@ -56,4 +76,5 @@ def login():
             }
         }), 200
     
-    return jsonify({"error": "Invalid credentials"}), 401
+    # NEW: Better text for the frontend popup!
+    return jsonify({"error": "Wrong email or password!"}), 401
