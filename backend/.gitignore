@@ -147,3 +147,6 @@ __pycache__/
 *.egg
 .Python
 *.pkl
+
+# Expo
+.expo/
