@@ -1,5 +1,5 @@
-// ⚠️ IMPORTANT: Ensure this matches your computer's IP found via ipconfig/ifconfig
-const BASE_URL = "http://192.168.0.153:5000"; 
+// ⚠️ IMPORTANT: Set EXPO_PUBLIC_API_URL in your .env file, fallback is the local IP
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.0.153:5000"; 
 
 // ==========================================
 // AUTHENTICATION
@@ -107,6 +107,7 @@ export const getDashboardData = async (email: string) => {
     if (!response.ok) return null; 
     return await response.json();
   } catch (error) {
+    console.error("Dashboard Data Fetch Error:", error); // FIXED: Logged the error
     return null;
   }
 };
@@ -118,6 +119,7 @@ export const getRecommendations = async (email: string) => {
     if (!response.ok) return { recommendations: [] };
     return await response.json();
   } catch (error) {
+    console.error("Recommendations Fetch Error:", error); // FIXED: Logged the error
     return { recommendations: [] };
   }
 };
@@ -129,6 +131,7 @@ export const getMostCarbonActivity = async (email: string) => {
     if (!response.ok) return null;
     return await response.json();
   } catch (error) {
+    console.error("Most Carbon Activity Fetch Error:", error); // FIXED: Logged the error
     return null;
   }
 };
@@ -140,6 +143,7 @@ export const getTodayUsage = async (email: string) => {
       if (!response.ok) return null;
       return await response.json();
   } catch (error) {
+      console.error("Today Usage Fetch Error:", error); // FIXED: Logged the error
       return null;
   }
 };
@@ -151,6 +155,7 @@ export const getTodayBreakdown = async (email: string) => {
       if (!response.ok) return [];
       return await response.json();
   } catch (error) {
+      console.error("Today Breakdown Fetch Error:", error); // FIXED: Logged the error
       return [];
   }
 };
@@ -162,6 +167,7 @@ export const getWeeklyHistory = async (email: string) => {
       if (!response.ok) return null;
       return await response.json();
   } catch (error) {
+      console.error("Weekly History Fetch Error:", error); // FIXED: Logged the error
       return null;
   }
 };

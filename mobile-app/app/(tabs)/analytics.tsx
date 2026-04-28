@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from "react-native";
 import { PieChart, BarChart } from "react-native-gifted-charts"; 
 import { Ionicons } from '@expo/vector-icons';
-import { getTodayUsage, getWeeklyHistory, getAiAnalysis, getTodayBreakdown } from "../../src/services/api";
+import { getWeeklyHistory, getAiAnalysis, getTodayBreakdown } from "../../src/services/api";
 
 // Import our contexts
 import { useTheme } from "../../src/context/ThemeContext";
@@ -25,7 +25,7 @@ export default function AnalyticsScreen() {
   // Grab translation function AND the current language state
   const { t, language } = useLanguage();
 
-  const [usage, setUsage] = useState({ streaming: 0, calls: 0, social: 0, general: 0 });
+  // FIXED: Removed unused 'usage' state variables
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [pieChartData, setPieChartData] = useState<any[]>([]);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
@@ -36,24 +36,23 @@ export default function AnalyticsScreen() {
 
   const { isDarkMode } = useTheme();
 
-  useEffect(() => {
-    fetchAnalyticsData();
-  }, [userEmail]);
-
-  const fetchAnalyticsData = async () => {
+  // FIXED: Wrapped in useCallback and properly included in the dependency array
+  const fetchAnalyticsData = useCallback(async () => {
     if (!userEmail) return;
-    const [todayRes, weeklyRes, breakdownRes] = await Promise.all([ 
-      getTodayUsage(userEmail), 
+    const [weeklyRes, breakdownRes] = await Promise.all([ 
       getWeeklyHistory(userEmail),
       getTodayBreakdown(userEmail)
     ]);
     
-    if (todayRes) setUsage(todayRes);
     if (weeklyRes) setWeeklyData(weeklyRes);
     if (breakdownRes) setPieChartData(breakdownRes);
     
     setLoading(false);
-  };
+  }, [userEmail]);
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [fetchAnalyticsData]);
 
   const totalEmissions = pieChartData.reduce((sum, item) => sum + item.emissions, 0);
 

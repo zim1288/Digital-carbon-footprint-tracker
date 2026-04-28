@@ -19,7 +19,7 @@ const GlobalHeader = ({ title }: { title: string }) => {
   const slideAnim = useRef(new Animated.Value(width)).current; 
   
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const { language, toggleLanguage, t } = useLanguage();
+  const { toggleLanguage, t } = useLanguage(); // FIXED: Removed unused 'language' variable
 
   const openMenu = () => {
     setIsSettingsVisible(true);

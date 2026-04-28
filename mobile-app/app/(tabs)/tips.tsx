@@ -35,17 +35,19 @@ export default function TipsScreen() {
 
   const { isDarkMode } = useTheme();
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchTips();
-    }, [userEmail])
-  );
-
-  const fetchTips = async () => {
+  // FIXED: Wrapped fetchTips in useCallback
+  const fetchTips = useCallback(async () => {
     if (!userEmail) return;
     const recRes = await getRecommendations(userEmail);
     if (recRes?.recommendations) setRecommendations(recRes.recommendations);
-  };
+  }, [userEmail]);
+
+  // FIXED: Added fetchTips to dependency array
+  useFocusEffect(
+    useCallback(() => {
+      fetchTips();
+    }, [fetchTips])
+  );
 
   const handleAskCoach = async () => {
     if (!chatInput.trim()) return;
