@@ -1,403 +1,267 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Modal, ActivityIndicator } from "react-native";
-import { router } from "expo-router";
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Keyboard,
+  TouchableWithoutFeedback
+} from 'react-native';
+import { useRouter } from 'expo-router';
 
-import { Ionicons } from '@expo/vector-icons';
+// --- Constants & Config ---
+const API_BASE_URL = 'http://192.168.0.153:5000/auth'; 
 
-import { loginUser, registerUser, verifyOtp, resendOtp, forgotPassword, resetPassword } from "../src/services/api";
-import { useAuth } from "../src/context/AuthContext";
-import { useLanguage } from "../src/context/LanguageContext";
-import { useTheme } from "../src/context/ThemeContext";
+const COLORS = {
+  primary: '#10B981', 
+  primaryDark: '#059669',
+  background: '#F4FDF8',
+  surface: '#FFFFFF',
+  text: '#111827',
+  textSecondary: '#6B7280',
+  border: '#E5E7EB',
+};
 
-export default function LoginScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [name, setName] = useState("");
+type AuthState = 'LOGIN' | 'REGISTER' | 'VERIFY_OTP' | 'FORGOT_PASSWORD' | 'RESET_PASSWORD';
+
+export default function AuthScreen() {
+  const router = useRouter();
+  const [currentScreen, setCurrentScreen] = useState<AuthState>('LOGIN');
+  const [isLoading, setIsLoading] = useState(false);
   
-  const [showOtpModal, setShowOtpModal] = useState(false);
-  const [otp, setOtp] = useState("");
+  // Form State
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
 
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotStep, setForgotStep] = useState(1); 
-  const [newPassword, setNewPassword] = useState("");
-
-  const [isLoginMode, setIsLoginMode] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  const { login } = useAuth();
-  const { t } = useLanguage();
-  const { isDarkMode } = useTheme();
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prevTimer) => prevTimer - 1);
-      }, 1000);
+      interval = setInterval(() => setResendTimer((prev) => prev - 1), 1000);
     }
     return () => clearInterval(interval);
   }, [resendTimer]);
 
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = time % 60;
-    return `${minutes}:${seconds < 10 ? `0${seconds}` : seconds}`;
+  const navigateTo = (screen: AuthState) => {
+    Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+      setCurrentScreen(screen);
+      setOtp(''); 
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    });
   };
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password.");
-      return;
-    }
-    setLoading(true);
-    const result = await loginUser(email, password);
-    setLoading(false);
+  // --- API Methods ---
 
-    if (result?.message === "Login successful") {
-      login(email);
-      router.replace("/(tabs)/tracker");
-    } 
-    else if (result?.error === "Please verify your email before logging in.") {
-      Alert.alert("Verification Needed", "Your email is not verified yet. Please enter your code, or click 'Resend OTP' at the bottom if your code expired.");
-      setResendTimer(120); 
-      setShowOtpModal(true); 
-    } 
-    else {
-      Alert.alert("Login Failed", result?.error || "Unknown error");
+  const handleLogin = async () => {
+    if (!email || !password) return Alert.alert('Error', 'Missing credentials');
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        router.replace('/(tabs)/tracker'); // Immediate Redirect
+      } else {
+        Alert.alert('Login Failed', data.error);
+        if (data.error?.includes("verify")) navigateTo('VERIFY_OTP');
+      }
+    } catch (err) {
+      Alert.alert('Network Error', 'Check your connection to 192.168.0.153');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert("Error", "Please fill out all fields.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match!");
-      return;
-    }
-    setLoading(true);
-    const result = await registerUser(name, email, password);
-    setLoading(false);
-
-    if (result?.message === "Registration initiated. Please check your email for the OTP.") {
-      Alert.alert("Check your inbox", "We sent a 6-digit verification code to your email. It will expire in 5 minutes.");
-      setResendTimer(120); 
-      setShowOtpModal(true);
-    } else {
-      Alert.alert("Registration Failed", result?.error || "Registration failed");
-    }
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        Alert.alert('Verify Account', data.message);
+        setResendTimer(120);
+        navigateTo('VERIFY_OTP');
+      } else {
+        Alert.alert('Error', data.error);
+      }
+    } catch (err) { Alert.alert('Network Error', 'Server unreachable'); }
+    finally { setIsLoading(false); }
   };
 
-  const handleVerifyOtp = async () => {
-    if (!otp || otp.length !== 6) {
-      Alert.alert("Error", "Please enter the 6-digit OTP.");
-      return;
-    }
-    setLoading(true);
-    const result = await verifyOtp(email, otp);
-    setLoading(false);
-
-    if (result?.message === "Email verified successfully! You can now log in.") {
-      Alert.alert("Success", "Email verified! You can now log in.");
-      setShowOtpModal(false);
-      setIsLoginMode(true);
-      setPassword("");
-      setConfirmPassword("");
-      setOtp("");
-      setResendTimer(0);
-    } else {
-      Alert.alert("Verification Failed", result?.error || "Invalid OTP code.");
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (resendTimer > 0) return;
-    setLoading(true);
-    const result = await resendOtp(email);
-    setLoading(false);
-
-    if (result?.message) {
-      Alert.alert("OTP Sent", "A new verification code has been sent to your email.");
-      setResendTimer(120); 
-      setOtp(""); 
-    } else {
-      Alert.alert("Error", result?.error || "Failed to resend OTP.");
-    }
+  const handleVerifyOTP = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      if (res.ok) {
+        Alert.alert('Success', 'Email verified!');
+        navigateTo('LOGIN');
+      } else {
+        const data = await res.json();
+        Alert.alert('Failed', data.error);
+      }
+    } catch (err) { Alert.alert('Error', 'Connection failed'); }
+    finally { setIsLoading(false); }
   };
 
   const handleForgotPassword = async () => {
-    if (!email) {
-      Alert.alert("Error", "Please enter your email address first.");
-      return;
-    }
-    setLoading(true);
-    const result = await forgotPassword(email);
-    setLoading(false);
-
-    if (result?.message) {
-      Alert.alert("Code Sent", "Check your email for the password reset code.");
-      setForgotStep(2);
-    } else {
-      Alert.alert("Error", result?.error || "Failed to send reset code.");
-    }
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) { navigateTo('RESET_PASSWORD'); }
+      else { Alert.alert('Error', 'Email not found'); }
+    } catch (err) { Alert.alert('Error', 'Server error'); }
+    finally { setIsLoading(false); }
   };
 
   const handleResetPassword = async () => {
-    if (!otp || !newPassword) {
-      Alert.alert("Error", "Please enter the OTP and a new password.");
-      return;
-    }
-    setLoading(true);
-    const result = await resetPassword(email, otp, newPassword);
-    setLoading(false);
-
-    if (result?.message === "Password has been reset successfully! You can now log in.") {
-      Alert.alert("Success", "Password reset! You can now log in with your new password.");
-      setShowForgotModal(false);
-      setForgotStep(1);
-      setPassword("");
-      setNewPassword("");
-      setOtp("");
-    } else {
-      Alert.alert("Error", result?.error || "Failed to reset password.");
-    }
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp, new_password: newPassword }),
+      });
+      if (res.ok) {
+        Alert.alert('Success', 'Password updated!');
+        navigateTo('LOGIN');
+      } else { Alert.alert('Error', 'Reset failed'); }
+    } catch (err) { Alert.alert('Error', 'Connection failed'); }
+    finally { setIsLoading(false); }
   };
 
-  const bgColor = isDarkMode ? "#111827" : "#ffffff";
-  const textColorMain = isDarkMode ? "#F9FAFB" : "#111827";
-  const textColorSub = isDarkMode ? "#9CA3AF" : "#666666";
-  const inputBg = isDarkMode ? "#1F2937" : "#F9FAFB";
-  const inputBorder = isDarkMode ? "#374151" : "#E5E7EB";
+  // --- UI Components ---
+
+  const OTPInput = () => (
+    <View style={styles.otpContainer}>
+      <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+        <View style={styles.otpBoxesContainer}>
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <View key={i} style={[styles.otpBox, otp.length === i && styles.otpBoxActive]}>
+              <Text style={styles.otpText}>{otp[i] || ''}</Text>
+            </View>
+          ))}
+        </View>
+      </TouchableWithoutFeedback>
+      <TextInput
+        value={otp}
+        onChangeText={(t) => setOtp(t.replace(/[^0-9]/g, '').slice(0, 6))}
+        keyboardType="numeric"
+        style={styles.hiddenOTPInput}
+        autoFocus
+      />
+    </View>
+  );
 
   return (
-    <View style={[styles.loginContainer, { backgroundColor: bgColor }]}>
-      <Text style={styles.emojiLogo}>🌍</Text>
-      <Text style={styles.loginHeader}>EcoBit</Text>
-      <Text style={[styles.loginSubheader, { color: textColorSub }]}>
-        {isLoginMode ? t('monitorFootprint') : t('createAccount')}
-      </Text>
-
-      <View style={styles.inputWrapper}>
-        {!isLoginMode && (
-          <TextInput
-            style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColorMain }]}
-            placeholder={t('fullName')}
-            value={name}
-            onChangeText={setName}
-            placeholderTextColor="#999"
-          />
-        )}
-        <TextInput
-          style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColorMain }]}
-          placeholder={t('email')}
-          value={email}
-          onChangeText={setEmail}
-          placeholderTextColor="#999"
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        
-        <View style={[
-          styles.passwordContainer,
-          {
-            backgroundColor: inputBg,
-            borderColor: inputBorder,
-            marginBottom: isLoginMode ? 5 : 15
-          }
-        ]}>
-          <TextInput
-            style={[styles.passwordInput, { color: textColorMain }]}
-            placeholder={t('password')}
-            value={password}
-            secureTextEntry={!showPassword}
-            onChangeText={setPassword}
-            placeholderTextColor="#999"
-          />
-          <TouchableOpacity
-            style={styles.eyeButton}
-            onPress={() => setShowPassword(!showPassword)}
-          >
-            <Ionicons name={showPassword ? "eye-off" : "eye"} size={22} color={textColorSub} />
-          </TouchableOpacity>
-        </View>
-
-        {isLoginMode && (
-          <TouchableOpacity style={{ alignSelf: "flex-end", marginBottom: 20, marginTop: 5 }} onPress={() => setShowForgotModal(true)}>
-            <Text style={{ color: "#10B981", fontWeight: "600" }}>Forgot Password?</Text>
-          </TouchableOpacity>
-        )}
-
-        {!isLoginMode && (
-          <View style={[
-            styles.passwordContainer,
-            {
-              backgroundColor: inputBg,
-              borderColor: inputBorder,
-              marginBottom: 5
-            }
-          ]}>
-            <TextInput
-              style={[styles.passwordInput, { color: textColorMain }]}
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              secureTextEntry 
-              onChangeText={setConfirmPassword}
-              placeholderTextColor="#999"
-            />
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.inner}>
+          <View style={styles.header}>
+            <Text style={styles.logo}>🌍 EcoBit</Text>
+            <Text style={styles.subtitle}>Track, Reduce, Sustain</Text>
           </View>
-        )}
-        
-        {!isLoginMode && (
-          <Text style={[styles.passwordHint, { color: textColorSub }]}>
-            Password must be 8+ characters with an uppercase letter, lowercase letter, number, and special character (!@#$).
-          </Text>
-        )}
-      </View>
 
-      <TouchableOpacity style={styles.loginBtn} onPress={isLoginMode ? handleLogin : handleRegister}>
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.loginBtnText}>
-            {isLoginMode ? t('login') : t('signUp')}
-          </Text>
-        )}
-      </TouchableOpacity>
-
-      <TouchableOpacity style={{ marginTop: 25, alignItems: "center" }} onPress={() => setIsLoginMode(!isLoginMode)}>
-        <Text style={{ color: "#10B981", fontSize: 16, fontWeight: "600" }}>
-          {isLoginMode ? t('dontHaveAccount') : t('alreadyHaveAccount')}
-        </Text>
-      </TouchableOpacity>
-
-      {/* OTP REGISTRATION MODAL */}
-      <Modal visible={showOtpModal} transparent={true} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: inputBg, borderColor: inputBorder }]}>
-            <Ionicons name="mail-unread-outline" size={50} color="#10B981" style={{ marginBottom: 15 }} />
-            <Text style={[styles.modalTitle, { color: textColorMain }]}>Verify Your Email</Text>
-            <Text style={[styles.modalSub, { color: textColorSub }]}>
-              Enter the 6-digit code sent to {email}
-            </Text>
-            
-            <TextInput
-              style={[styles.otpInput, { backgroundColor: bgColor, color: textColorMain, borderColor: inputBorder }]}
-              placeholder="000000"
-              value={otp}
-              onChangeText={setOtp}
-              keyboardType="number-pad"
-              maxLength={6}
-              placeholderTextColor="#999"
-            />
-            
-            <TouchableOpacity style={styles.verifyBtn} onPress={handleVerifyOtp} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.verifyBtnText}>Verify Account</Text>}
-            </TouchableOpacity>
-
-            <View style={styles.resendContainer}>
-              <Text style={{ color: textColorSub, fontSize: 14 }}>Didn't receive the code? </Text>
-              <TouchableOpacity onPress={handleResendOtp} disabled={resendTimer > 0 || loading}>
-                <Text style={{ color: resendTimer > 0 ? "#9CA3AF" : "#10B981", fontWeight: "bold", fontSize: 14 }}>
-                  {resendTimer > 0 ? `Resend in ${formatTime(resendTimer)}` : "Resend OTP"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            
-            <TouchableOpacity style={{ marginTop: 25 }} onPress={() => setShowOtpModal(false)}>
-              <Text style={{ color: "#EF4444", fontWeight: "600" }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* FORGOT PASSWORD MODAL */}
-      <Modal visible={showForgotModal} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: inputBg, borderColor: inputBorder }]}>
-            <Ionicons name="lock-closed-outline" size={50} color="#10B981" style={{ marginBottom: 15 }} />
-            <Text style={[styles.modalTitle, { color: textColorMain }]}>Reset Password</Text>
-            
-            {forgotStep === 1 ? (
+          <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
+            {currentScreen === 'LOGIN' && (
               <>
-                <Text style={[styles.modalSub, { color: textColorSub }]}>
-                  Enter your email address to receive a password reset code.
-                </Text>
-                <TextInput
-                  style={[styles.input, { width: "100%", backgroundColor: bgColor, borderColor: inputBorder, color: textColorMain }]}
-                  placeholder={t('email')}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                />
-                <TouchableOpacity style={styles.verifyBtn} onPress={handleForgotPassword} disabled={loading}>
-                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.verifyBtnText}>Send Reset Code</Text>}
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={[styles.modalSub, { color: textColorSub }]}>
-                  Enter the 6-digit code sent to your email and create a new password.
-                </Text>
-                <TextInput
-                  style={[styles.otpInput, { backgroundColor: bgColor, color: textColorMain, borderColor: inputBorder, marginBottom: 15, fontSize: 24, letterSpacing: 8 }]}
-                  placeholder="000000"
-                  value={otp}
-                  onChangeText={setOtp}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  placeholderTextColor="#999"
-                />
-                <TextInput
-                  style={[styles.input, { width: "100%", backgroundColor: bgColor, borderColor: inputBorder, color: textColorMain }]}
-                  placeholder="New Password"
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  secureTextEntry
-                  placeholderTextColor="#999"
-                />
-                <TouchableOpacity style={styles.verifyBtn} onPress={handleResetPassword} disabled={loading}>
-                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.verifyBtnText}>Save New Password</Text>}
-                </TouchableOpacity>
+                <Text style={styles.title}>Welcome Back</Text>
+                <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
+                <TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
+                <TouchableOpacity onPress={() => navigateTo('FORGOT_PASSWORD')} style={styles.rightAlign}><Text style={styles.link}>Forgot Password?</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>{isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Log In</Text>}</TouchableOpacity>
+                <View style={styles.footer}><Text>New here? </Text><TouchableOpacity onPress={() => navigateTo('REGISTER')}><Text style={styles.linkBold}>Sign Up</Text></TouchableOpacity></View>
               </>
             )}
 
-            <TouchableOpacity style={{ marginTop: 25 }} onPress={() => { setShowForgotModal(false); setForgotStep(1); setOtp(""); setNewPassword(""); }}>
-              <Text style={{ color: "#EF4444", fontWeight: "600" }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+            {currentScreen === 'REGISTER' && (
+              <>
+                <Text style={styles.title}>Create Account</Text>
+                <TextInput style={styles.input} placeholder="Full Name" value={name} onChangeText={setName} />
+                <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
+                <TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
+                <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={isLoading}><Text style={styles.btnText}>Sign Up</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => navigateTo('LOGIN')} style={styles.center}><Text style={styles.link}>Back to Login</Text></TouchableOpacity>
+              </>
+            )}
 
-    </View>
+            {currentScreen === 'VERIFY_OTP' && (
+              <>
+                <Text style={styles.title}>Verify Email</Text>
+                <OTPInput />
+                <TouchableOpacity style={styles.button} onPress={handleVerifyOTP} disabled={otp.length !== 6}><Text style={styles.btnText}>Verify</Text></TouchableOpacity>
+              </>
+            )}
+
+            {currentScreen === 'FORGOT_PASSWORD' && (
+              <>
+                <Text style={styles.title}>Reset Request</Text>
+                <TextInput style={styles.input} placeholder="Account Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
+                <TouchableOpacity style={styles.button} onPress={handleForgotPassword}><Text style={styles.btnText}>Send Code</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => navigateTo('LOGIN')} style={styles.center}><Text style={styles.link}>Cancel</Text></TouchableOpacity>
+              </>
+            )}
+
+            {currentScreen === 'RESET_PASSWORD' && (
+              <>
+                <Text style={styles.title}>New Password</Text>
+                <OTPInput />
+                <TextInput style={[styles.input, {marginTop: 20}]} placeholder="New Password" secureTextEntry value={newPassword} onChangeText={setNewPassword} />
+                <TouchableOpacity style={styles.button} onPress={handleResetPassword}><Text style={styles.btnText}>Update Password</Text></TouchableOpacity>
+              </>
+            )}
+          </Animated.View>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  loginContainer: { flex: 1, justifyContent: "center", padding: 30 },
-  emojiLogo: { fontSize: 60, textAlign: "center", marginBottom: 10 },
-  loginHeader: { fontSize: 32, fontWeight: "bold", textAlign: "center", color: "#059669" },
-  loginSubheader: { fontSize: 16, textAlign: "center", marginBottom: 40 },
-  inputWrapper: { marginBottom: 30 },
-  input: { padding: 20, borderRadius: 12, marginBottom: 15, fontSize: 16, borderWidth: 1 },
-  passwordContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12 },
-  passwordInput: { flex: 1, paddingVertical: 20, paddingLeft: 20, fontSize: 16 },
-  eyeButton: { padding: 15 },
-  passwordHint: { fontSize: 12, marginTop: -5, marginBottom: 15, paddingHorizontal: 5, lineHeight: 18 },
-  loginBtn: { backgroundColor: "#059669", padding: 18, borderRadius: 12, alignItems: "center" },
-  loginBtnText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
-  modalContent: { width: "100%", padding: 30, borderRadius: 20, alignItems: "center", borderWidth: 1 },
-  modalTitle: { fontSize: 22, fontWeight: "bold", marginBottom: 10 },
-  modalSub: { fontSize: 14, textAlign: "center", marginBottom: 20, lineHeight: 20 },
-  otpInput: { width: "80%", fontSize: 32, letterSpacing: 10, textAlign: "center", padding: 15, borderRadius: 12, borderWidth: 1, marginBottom: 20 },
-  verifyBtn: { backgroundColor: "#10B981", width: "100%", padding: 15, borderRadius: 12, alignItems: "center" },
-  verifyBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  resendContainer: { flexDirection: "row", marginTop: 25, alignItems: "center", justifyContent: "center" }
+  container: { flex: 1, backgroundColor: COLORS.background },
+  inner: { flex: 1, justifyContent: 'center', padding: 25 },
+  header: { alignItems: 'center', marginBottom: 40 },
+  logo: { fontSize: 40, fontWeight: '800', color: COLORS.primary },
+  subtitle: { fontSize: 16, color: COLORS.textSecondary, marginTop: 5 },
+  card: { backgroundColor: COLORS.surface, padding: 30, borderRadius: 25, elevation: 8 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: 25, textAlign: 'center' },
+  input: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 15, marginBottom: 15 },
+  button: { backgroundColor: COLORS.primary, padding: 16, borderRadius: 12, alignItems: 'center' },
+  btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  link: { color: COLORS.primaryDark, fontWeight: '600' },
+  linkBold: { color: COLORS.primary, fontWeight: '700' },
+  rightAlign: { alignItems: 'flex-end', marginBottom: 15 },
+  center: { alignItems: 'center', marginTop: 20 },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 25 },
+  otpContainer: { alignItems: 'center' },
+  otpBoxesContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  otpBox: { width: 42, height: 50, borderWidth: 2, borderColor: COLORS.border, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  otpBoxActive: { borderColor: COLORS.primary },
+  otpText: { fontSize: 22, fontWeight: '700' },
+  hiddenOTPInput: { position: 'absolute', opacity: 0, width: 1 },
 });
